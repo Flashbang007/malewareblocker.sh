@@ -14,6 +14,7 @@ WORKDIR="/home/flashbang/Data"
 MAILUSER=root
 DBBLOCKED="/etc/bind/db.blocked"
 NAMEDBLOCKED="/etc/bind/named.conf.blocked"
+NAMEDCONF="/etc/bind/named.conf"
 
 FILENAME="$WORKDIR/domains_to_block"
 WHITELIST="$WORKDIR/whitelist.txt"
@@ -28,6 +29,7 @@ BLOCKDOMAINSARRAY=( \
 #"https://hosts-file.net/fsa.txt" \
 #"https://hosts-file.net/hjk.txt" \
 #"https://raw.githubusercontent.com/notracking/hosts-blocklists/master/hostnames.txt" \
+#"https://hosts.ubuntu101.co.za/domains.list" \
 "https://raw.githubusercontent.com/anudeepND/youtubeadsblacklist/master/domainlist.txt" \
 "http://malwaredomains.lehigh.edu/files/justdomains" \
 "https://pgl.yoyo.org/adservers/serverlist.php?hostformat=nohtml&showintro=1&mimetype=plaintext" \
@@ -39,8 +41,7 @@ BLOCKDOMAINSARRAY=( \
 )
 #---------------------
 # functions ----------
-wait_time()
-{
+wait_time(){
         # wait a bit, since bind is sluggish
         echo -e "-> Wait for bind9 to restart: "
                 secs=$((7))
@@ -53,15 +54,13 @@ done
 }
 
 
-cleanup()
-{
+cleanup(){
         rm $FILENAME*
 
 }
 
 
-restart_bind()
-{
+restart_bind(){
         echo "-> Restarting bind9:"
         systemctl restart bind9
         wait_time
@@ -70,8 +69,7 @@ restart_bind()
 }
 
 
-reset_blockfile()
-{
+reset_blockfile(){
         echo "-> Cleaning blockfile:"
         cp $NAMEDBLOCKED $NAMEDBLOCKED.analyse
         > $NAMEDBLOCKED
@@ -92,16 +90,14 @@ reset_if_lc_fail(){
 }
 
 
-download_all_lists()
-{
+download_all_lists(){
         for BLOCKDOMAIN in "${BLOCKDOMAINSARRAY[@]}"; do
                 wget "$BLOCKDOMAIN" -O - >> $FILENAME
         done
 }
 
 
-clean_list()
-{
+clean_list(){
         echo "-> Cleaning list"
         # clean db file from ^M carriage return"
         perl -p -i -e "s/\r//g" $FILENAME
@@ -116,8 +112,7 @@ clean_list()
 }
 
 
-add_blacklist()
-{
+add_blacklist(){
         echo "-> Adding blacklist"
         if [ -f $BLACKLIST ]; then
                 cat $BLACKLIST >> $FILENAME
@@ -126,8 +121,7 @@ add_blacklist()
 }
 
 
-make_uniq()
-{
+make_uniq(){
         echo "-> Making list uniq"
         sort $FILENAME | uniq | sort | uniq > $FILENAME.uniq
         cp $FILENAME.uniq $FILENAME
@@ -135,8 +129,7 @@ make_uniq()
 }
 
 
-substitute_whitelist()
-{
+substitute_whitelist(){
         echo "-> Substituting whitelist"
         if [ -f $WHITELIST ]; then
                 echo "-> Removing whitelist domains"
@@ -147,18 +140,19 @@ substitute_whitelist()
 }
 
 
-create_db()
-{
+create_db(){
         echo "-> Creating $NAMEDBLOCKED"
         for DOMAIN in $(cat $FILENAME) ; do
                 echo "zone \"$DOMAIN\" {type master; file \"/etc/bind/db.blocked\";};" >> $NAMEDBLOCKED
         done
 
+        echo 'zone "blocked.local" {type master; file "/etc/bind/db.blocked";};' >> $NAMEDBLOCKED
+        echo 'zone "178.168.192.in-addr.arpa" {type master; file "/etc/bind/db.178.168.192";};' >> $NAMEDBLOCKED
+
 }
 
 
-check_db()
-{
+check_db(){
         echo "-> Checking $NAMEDBLOCKED"
         named-checkconf $NAMEDBLOCKED | tee $LOG
         reset_if_lc_fail "named-checkconf"
@@ -199,6 +193,14 @@ ghtydomain.com gets directed to the designated address
 *       IN      A       127.0.0.1; This wildcard entry means that any permutation of xxx.nau
 ghtydomain.com gets directed to the designated address
 "
+fi
+
+# check if blockefile is included
+if grep "include \"$NAMEDBLOCKED\";" > /dev/null $NAMEDCONF; then
+        :
+else
+        echo "inclde satement is added to $NAMEDCONF"
+        echo "include \"$NAMEDBLOCKED\";"
 fi
 
 # get clean Files
