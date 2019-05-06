@@ -192,7 +192,7 @@ ghtydomain.com gets directed to the designated address
 ghtydomain.com gets directed to the designated address
 *       IN      A       127.0.0.1; This wildcard entry means that any permutation of xxx.nau
 ghtydomain.com gets directed to the designated address
-"
+" > $DBBLOCKED
 fi
 
 # check if blockefile is included
