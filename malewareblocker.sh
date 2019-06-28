@@ -62,7 +62,7 @@ cleanup(){
 
 restart_bind(){
         echo "-> Restarting bind9:"
-        systemctl restart bind9
+        systemctl reload bind9
         wait_time
         systemctl status bind9 --no-pager
 
@@ -160,6 +160,7 @@ check_db(){
 }
 
 #---------------------
+check_root
 check_dir $WORKDIR
 
 if [[ "$1" == "-d" ]]; then
@@ -196,11 +197,11 @@ ghtydomain.com gets directed to the designated address
 fi
 
 # check if blockefile is included
-if grep "include \"$NAMEDBLOCKED\";" > /dev/null $NAMEDCONF; then
+if grep "include \"$NAMEDBLOCKED\";" $NAMEDCONF > /dev/null; then
         :
 else
         echo "inclde satement is added to $NAMEDCONF"
-        echo "include \"$NAMEDBLOCKED\";"
+        echo "include \"$NAMEDBLOCKED\";" >> $NAMEDCONF
 fi
 
 # get clean Files
